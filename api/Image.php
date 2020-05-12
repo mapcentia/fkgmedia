@@ -10,6 +10,9 @@ use \app\inc\Session;
 use \app\inc\Input;
 use \app\inc\Model;
 use \app\models\Table;
+use \Aws\S3\S3Client;
+use \League\Flysystem\AwsS3v3\AwsS3Adapter;
+use \League\Flysystem\Filesystem;
 
 /**
  * Class Processvector
@@ -48,67 +51,103 @@ class Image extends \app\inc\Controller
             @mkdir($targetDir);
         }
 
-        if (isset($_REQUEST["name"])) {
-            $fileName = $_REQUEST["name"];
+        if (isset($_REQUEST["names"])) {
+            $fileNames = $_REQUEST["names"];
         } elseif (!empty($_FILES)) {
-            $fileName = $_FILES["file"]["name"];
+            $fileNames = $_FILES["files"]["name"];
         } else {
             $fileName = uniqid("file_");
         }
 
-        $filePath = $targetDir . DIRECTORY_SEPARATOR . $fileName;
+        print_r($fileNames);
+        print_r($_FILES["files"]);
+        //die();
+
 
         $chunk = isset($_REQUEST["chunk"]) ? intval($_REQUEST["chunk"]) : 0;
         $chunks = isset($_REQUEST["chunks"]) ? intval($_REQUEST["chunks"]) : 0;
 
-        if ($cleanupTargetDir) {
-            if (!is_dir($targetDir) || !$dir = opendir($targetDir)) {
-                return [
-                    "success" => false,
-                    "code" => 100,
-                    "message" => "Failed to open temp directory.",
-                ];
-            }
-            while (($file = readdir($dir)) !== false) {
-                $tmpfilePath = $targetDir . DIRECTORY_SEPARATOR . $file;
 
-                // If temp file is current file proceed to the next
-                if ($tmpfilePath == "{$filePath}.part") {
-                    continue;
-                }
+        $client = new S3Client([
+            'credentials' => [
+                'key'    => 'AKIAIPBMWYRPD6CSWXDQ',
+                'secret' => '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',
+            ],
+            'region' => 'eu-west-1',
+            'version' => 'latest',
+        ]);
 
-                // Remove temp file if it is older than the max age and is not the current file
-                if (preg_match('/\.part$/', $file) && (filemtime($tmpfilePath) < time() - $maxFileAge)) {
-                    @unlink($tmpfilePath);
-                }
-            }
-            closedir($dir);
-        }
-        // Open temp file
-        if (!$out = @fopen("{$filePath}.part", $chunks ? "ab" : "wb")) {
-            return [
-                "success" => false,
-                "code" => 102,
-                "message" => "Failed to open output stream.",
-            ];
-        }
+        $adapter = new AwsS3Adapter($client, 'mapcentia-www');
+
+        $filesystem = new Filesystem($adapter);
+
 
         if (!empty($_FILES)) {
-            if ($_FILES["file"]["error"] || !is_uploaded_file($_FILES["file"]["tmp_name"])) {
-                return [
-                    "success" => false,
-                    "code" => 103,
-                    "message" => "Failed to move uploaded file.",
-                ];
-            }
+            for ($i = 0; $i < sizeof($_FILES["files"]["name"]); $i++) {
+                $filePath = $targetDir . DIRECTORY_SEPARATOR . $fileNames[$i];
 
-            // Read binary input stream and append it to temp file
-            if (!$in = @fopen($_FILES["file"]["tmp_name"], "rb")) {
-                return [
-                    "success" => false,
-                    "code" => 101,
-                    "message" => "Failed to open input stream.",
-                ];
+                if ($cleanupTargetDir) {
+                    if (!is_dir($targetDir) || !$dir = opendir($targetDir)) {
+                        return [
+                            "success" => false,
+                            "code" => 100,
+                            "message" => "Failed to open temp directory.",
+                        ];
+                    }
+                    while (($file = readdir($dir)) !== false) {
+                        $tmpfilePath = $targetDir . DIRECTORY_SEPARATOR . $file;
+
+                        // If temp file is current file proceed to the next
+                        if ($tmpfilePath == "{$filePath}.part") {
+                            continue;
+                        }
+
+                        // Remove temp file if it is older than the max age and is not the current file
+                        if (preg_match('/\.part$/', $file) && (filemtime($tmpfilePath) < time() - $maxFileAge)) {
+                            @unlink($tmpfilePath);
+                        }
+                    }
+                    closedir($dir);
+                }
+                // Open temp file
+                if (!$out = @fopen("{$filePath}.part", $chunks ? "ab" : "wb")) {
+                    return [
+                        "success" => false,
+                        "code" => 102,
+                        "message" => "Failed to open output stream.",
+                    ];
+                }
+
+                if ($_FILES["files"]["error"][$i] || !is_uploaded_file($_FILES["files"]["tmp_name"][$i])) {
+                    return [
+                        "success" => false,
+                        "code" => 103,
+                        "message" => "Failed to move uploaded file.",
+                    ];
+                }
+
+                // Read binary input stream and append it to temp file
+                if (!$in = @fopen($_FILES["files"]["tmp_name"][$i], "rb")) {
+                    return [
+                        "success" => false,
+                        "code" => 101,
+                        "message" => "Failed to open input stream.",
+                    ];
+                }
+
+                while ($buff = fread($in, 4096)) {
+                    fwrite($out, $buff);
+                }
+
+                @fclose($out);
+                @fclose($in);
+
+                // Check if file has been uploaded
+                if (!$chunks || $chunk == $chunks - 1) {
+                    // Strip the temp .part suffix off
+                    rename("{$filePath}.part", $filePath);
+                }
+                $response = $filesystem->put("test/" . $fileNames[$i], file_get_contents($filePath));
             }
         } else {
             if (!$in = @fopen("php://input", "rb")) {
@@ -120,18 +159,10 @@ class Image extends \app\inc\Controller
             }
         }
 
-        while ($buff = fread($in, 4096)) {
-            fwrite($out, $buff);
-        }
 
-        @fclose($out);
-        @fclose($in);
 
-        // Check if file has been uploaded
-        if (!$chunks || $chunk == $chunks - 1) {
-            // Strip the temp .part suffix off
-            rename("{$filePath}.part", $filePath);
-        }
+
+
         return [
             "success" => true,
             "image" => $fileName,
