@@ -59,11 +59,6 @@ class Image extends \app\inc\Controller
             $fileName = uniqid("file_");
         }
 
-        print_r($fileNames);
-        print_r($_FILES["files"]);
-        //die();
-
-
         $chunk = isset($_REQUEST["chunk"]) ? intval($_REQUEST["chunk"]) : 0;
         $chunks = isset($_REQUEST["chunks"]) ? intval($_REQUEST["chunks"]) : 0;
 
