@@ -65,8 +65,8 @@ class Image extends \app\inc\Controller
 
         $client = new S3Client([
             'credentials' => [
-                'key'    => 'AKIAIPBMWYRPD6CSWXDQ',
-                'secret' => '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',
+                'key'    => 'xxx',
+                'secret' => 'xxx',
             ],
             'region' => 'eu-west-1',
             'version' => 'latest',
