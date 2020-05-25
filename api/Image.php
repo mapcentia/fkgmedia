@@ -206,14 +206,10 @@ class Image extends \app\inc\Controller
 
                 $response = $filesystem->put("test/" . $fileNames[$i], file_get_contents($filePath));
 
-
                 foreach ($thumbNailsSizes as $size) {
                     $this->createThumbnail($fileNames[$i], $size, $size, $targetDir, $targetDir . DIRECTORY_SEPARATOR . (string)$size . DIRECTORY_SEPARATOR);
                     $response = $filesystem->put("test" . DIRECTORY_SEPARATOR . (string)$size . DIRECTORY_SEPARATOR . $fileNames[$i], file_get_contents($targetDir . DIRECTORY_SEPARATOR . (string)$size . DIRECTORY_SEPARATOR . $fileNames[$i]));
-
                 }
-
-
             }
         } else {
             if (!$in = @fopen("php://input", "rb")) {
