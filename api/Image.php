@@ -3,16 +3,11 @@
 namespace app\extensions\fkgmedia\api;
 
 use \app\conf\App;
-use \app\inc\Response;
-use \app\models\Database;
-use \app\conf\Connection;
-use \app\inc\Session;
-use \app\inc\Input;
-use \app\inc\Model;
-use \app\models\Table;
 use \Aws\S3\S3Client;
 use \League\Flysystem\AwsS3v3\AwsS3Adapter;
 use \League\Flysystem\Filesystem;
+
+const S3_FOLDER = "fkg";
 
 /**
  * Class Processvector
@@ -24,18 +19,17 @@ class Image extends \app\inc\Controller
     function __construct()
     {
 
-        //Session::start();
-        //Session::authenticate(null);
     }
 
     public function get_index()
     {
-        die("GET");
 
     }
 
     public function createThumbnail($image_name, $new_width, $new_height, $uploadDir, $moveToDir)
     {
+
+
         $path = $uploadDir . '/' . $image_name;
 
         $mime = getimagesize($path);
@@ -204,11 +198,11 @@ class Image extends \app\inc\Controller
                     rename("{$filePath}.part", $filePath);
                 }
 
-                $response = $filesystem->put("test/" . $fileNames[$i], file_get_contents($filePath));
+                $response = $filesystem->put(S3_FOLDER . DIRECTORY_SEPARATOR . $fileNames[$i], file_get_contents($filePath));
 
                 foreach ($thumbNailsSizes as $size) {
                     $this->createThumbnail($fileNames[$i], $size, $size, $targetDir, $targetDir . DIRECTORY_SEPARATOR . (string)$size . DIRECTORY_SEPARATOR);
-                    $response = $filesystem->put("test" . DIRECTORY_SEPARATOR . (string)$size . DIRECTORY_SEPARATOR . $fileNames[$i], file_get_contents($targetDir . DIRECTORY_SEPARATOR . (string)$size . DIRECTORY_SEPARATOR . $fileNames[$i]));
+                    $response = $filesystem->put(S3_FOLDER . DIRECTORY_SEPARATOR . (string)$size . DIRECTORY_SEPARATOR . $fileNames[$i], file_get_contents($targetDir . DIRECTORY_SEPARATOR . (string)$size . DIRECTORY_SEPARATOR . $fileNames[$i]));
                 }
             }
         } else {
