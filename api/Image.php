@@ -28,17 +28,41 @@ class Image extends \app\inc\Controller
 
     public function createThumbnail($image_name, $new_width, $new_height, $uploadDir, $moveToDir)
     {
-
-
         $path = $uploadDir . '/' . $image_name;
-
         $mime = getimagesize($path);
+        $src_img = null;
 
         if ($mime['mime'] == 'image/png') {
             $src_img = imagecreatefrompng($path);
         }
         if ($mime['mime'] == 'image/jpg' || $mime['mime'] == 'image/jpeg' || $mime['mime'] == 'image/pjpeg') {
             $src_img = imagecreatefromjpeg($path);
+        }
+
+        $exif = exif_read_data($path);
+
+        if (isset($exif['Orientation']) ) {
+            $orientation = $exif['Orientation'];
+        }
+        elseif (isset($exif['IFD0']['Orientation'])) {
+            $orientation = $exif['IFD0']['Orientation'];
+        }
+        else {
+            $orientation = 0;
+        }
+
+        switch($orientation) {
+            case 3: // rotate 180 degrees
+                $src_img = imagerotate($src_img, 180, 0);
+                break;
+
+            case 6: // rotate 90 degrees CW
+                $src_img = imagerotate($src_img, 270, 0);
+                break;
+
+            case 8: // rotate 90 degrees CCW
+                $src_img = imagerotate($src_img, 90, 0);
+                break;
         }
 
         $old_x = imageSX($src_img);
