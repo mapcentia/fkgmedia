@@ -4,7 +4,7 @@ namespace app\extensions\fkgmedia\api;
 
 use \app\conf\App;
 use \Aws\S3\S3Client;
-use \League\Flysystem\AwsS3v3\AwsS3Adapter;
+use \League\Flysystem\AwsS3V3\AwsS3V3Adapter;
 use \League\Flysystem\Filesystem;
 
 const S3_FOLDER = "fkg";
@@ -151,7 +151,7 @@ class Image extends \app\inc\Controller
             'version' => 'latest',
         ]);
 
-        $adapter = new AwsS3Adapter($client, 'mapcentia-www');
+        $adapter = new AwsS3V3Adapter($client, 'mapcentia-www');
 
         $filesystem = new Filesystem($adapter);
 
@@ -222,11 +222,11 @@ class Image extends \app\inc\Controller
                     rename("{$filePath}.part", $filePath);
                 }
 
-                $response = $filesystem->put(S3_FOLDER . DIRECTORY_SEPARATOR . $fileNames[$i], file_get_contents($filePath));
+                $response = $filesystem->write(S3_FOLDER . DIRECTORY_SEPARATOR . $fileNames[$i], file_get_contents($filePath));
 
                 foreach ($thumbNailsSizes as $size) {
                     $this->createThumbnail($fileNames[$i], $size, $size, $targetDir, $targetDir . DIRECTORY_SEPARATOR . (string)$size . DIRECTORY_SEPARATOR);
-                    $response = $filesystem->put(S3_FOLDER . DIRECTORY_SEPARATOR . (string)$size . DIRECTORY_SEPARATOR . $fileNames[$i], file_get_contents($targetDir . DIRECTORY_SEPARATOR . (string)$size . DIRECTORY_SEPARATOR . $fileNames[$i]));
+                    $response = $filesystem->write(S3_FOLDER . DIRECTORY_SEPARATOR . (string)$size . DIRECTORY_SEPARATOR . $fileNames[$i], file_get_contents($targetDir . DIRECTORY_SEPARATOR . (string)$size . DIRECTORY_SEPARATOR . $fileNames[$i]));
                 }
             }
         } else {
