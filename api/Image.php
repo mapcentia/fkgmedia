@@ -82,6 +82,8 @@ class Image extends \app\inc\Controller
             $thumb_w = $new_width;
             $thumb_h = $new_height;
         }
+        $thumb_w = (int)round($thumb_w);
+        $thumb_h = (int)round($thumb_h);
 
         $dst_img = ImageCreateTrueColor($thumb_w, $thumb_h);
 
@@ -129,6 +131,9 @@ class Image extends \app\inc\Controller
                 @mkdir($targetDir . "/" . (string)$size);
             }
         }
+
+        $fileName = null;
+        $fileNames = null;
 
         if (isset($_REQUEST["names"])) {
             $fileNames = $_REQUEST["names"];
@@ -242,7 +247,7 @@ class Image extends \app\inc\Controller
 
         return [
             "success" => true,
-            "image" => $fileName,
+            "image" => $fileName ?? $fileNames,
         ];
     }
 
