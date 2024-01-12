@@ -3,6 +3,7 @@
 namespace app\extensions\fkgmedia\api;
 
 use app\conf\App;
+use app\inc\Controller;
 use Aws\S3\S3Client;
 use League\Flysystem\AwsS3V3\AwsS3V3Adapter;
 use League\Flysystem\Filesystem;
@@ -13,7 +14,7 @@ const S3_FOLDER = "fkg";
  * Class Processvector
  * @package app\controllers\upload
  */
-class Image extends \app\inc\Controller
+class Image extends Controller
 {
 
     function __construct()
